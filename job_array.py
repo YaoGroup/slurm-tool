@@ -25,10 +25,16 @@ class SlurmConfig:
                     f"to be {field.type}, got {repr(value)}"
                 raise ValueError(msg)
 
+    def fill_slurm_fields(self, slurm_template: str) -> str:
+        with open(slurm_template, "r") as f:
+            txt = f.read()
+            txt.format(**{f.name : getattr(self, f.name) for f in fields(self)})
+            return txt
+
 
 class JobArray:
 
-    SLURM_SCRIPT = Path(__file__).parent.joinpath("slurm-script_job-array.sh")
+    SLURM_SCRIPT = Path(__file__).parent.joinpath("job-array.slurm")
 
     def __init__(self, **kwargs):
         self._config = SlurmConfig(**kwargs)
@@ -42,15 +48,12 @@ class JobArray:
     def module_load(self, modules: List[str]):
         for module in modules:
             cmd = ShellCmd("module load " + module)
-            # if test load success, add them into final config
-            if cmd.execute():
-                self.modules.append(cmd)
+            self.modules.append(cmd)
 
     def add_prestep(self, cmd: str):
-        # if test load success, add it into final config
         cmd = ShellCmd(str(cmd))
-        if cmd.execute():
-            self.presteps.append(cmd)
+        self.presteps.append(cmd)
 
     def submit(self, jobs: List[str]):
+        # if test module-load and presteps success
         pass

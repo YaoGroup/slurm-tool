@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import List
 
@@ -22,13 +22,17 @@ class SlurmConfig:
 
     def __post_init__(self):
         for field in fields(self):
+            if not field.init:
+                continue
+
             value = getattr(self, field.name)
             if not isinstance(value, field.type):
                 msg = f"Expected {self.__class__.__name__}" + \
                     f"field {field.name}" + \
                     f"to be {field.type}, got {repr(value)}"
                 raise ValueError(msg)
-        arrays = f"0-{self.arrays}"
+
+        self.arrays = f"0-{self.arrays}"
         hour = int(self.time)
         minutes = int((self.time % 1) * 60)
         seconds = int(((self.time % 1) * 60 % 1) * 60)
@@ -49,21 +53,16 @@ class JobArray:
 
     def __init__(self, **kwargs):
         self._config = SlurmConfig(**kwargs)
-        self.modules = []
-        self.presteps = []
+        self._conda_env = ""
 
     @property
     def config(self):
         return self._config
 
-    def module_load(self, modules: List[str]):
-        for module in modules:
-            cmd = ShellCmd("module load " + module)
-            self.modules.append(cmd)
-
-    def add_prestep(self, cmd: str):
-        cmd = ShellCmd(str(cmd))
-        self.presteps.append(cmd)
+    def set_env(self, conda_env: str):
+        """Configure Conda environemtn"""
+        self._conda_env = str(conda_env)
+        self._config.conda_environemnt = self._conda_env
 
     def submit(self, jobs: List[str], store_script_as: str = ""):
         """
@@ -76,12 +75,12 @@ class JobArray:
             store_script_as (str):
                 the path to store the auto-generated slurm script, if empty, a default file name is generated.
         """
-        # if test module-load and presteps success
-        chain = ShellCmd("module purge")
-        for module in self.modules:
-            chain = chain.chain(module)
-        for step in self.presteps:
-            chain = chain.chain(step)
+        # test if environemtn works
+        cmd = ShellCmd("module purge")
+        cmd = cmd.chain(ShellCmd("module load anaconda3/2021.5"))
+        cmd = cmd.chain(ShellCmd(f"conda activate {self._conda_env}"))
+        if not cmd.execute():
+            raise RuntimeError(f"Test initialization of env '{self._conda_env}' failed")
 
         if not self.SLURM_TEMPLATE.is_file():
             msg = f"Can not find slurm script {self.SLURM_TEMPLATE}"
@@ -98,7 +97,11 @@ class JobArray:
                 cnt += 1
 
         with open(outf, "w") as f:
-            f.write(header)
+            f.write(header + "\n")
+            if self._conda_env:
+                f.write(f"conda activate {self._conda_env}\n")
+            for job in jobs:
+                f.write(job + "\n")
 
         with ShellPopenWrapper() as shell:
             shell.execute(f"sbatch {outf}")

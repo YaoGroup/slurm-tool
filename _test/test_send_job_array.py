@@ -24,14 +24,10 @@ class TestSubmitSampleJob:
             email="mc4536@princeton.edu"
         )
 
-        jobs.module_load("anaconda3/2020.11")
-        jobs.add_prestep("conda activate tf24")
+        jobs.set_env("tf24")
         jobs.submit([
-            "python3 sample_job.py param1-1 param2-1",
-            "python3 sample_job.py param1-2 param2-2",
-            "python3 sample_job.py param1-3 param2-3",
-            "python3 sample_job.py param1-4 param2-4",
-            "python3 sample_job.py param1-5 param2-5"
+            "python -c 'import tensorflow as tf; print(tf)'",
+            "python -c 'import tensorflow as tf; print(tf.__version__)'"
         ])
 
 

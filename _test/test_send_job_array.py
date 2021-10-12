@@ -18,8 +18,9 @@ class TestSubmitSampleJob:
             node=1,
             cpus=1,
             gpus=1,
+            arrays=4,
             mem_per_cpu=1,
-            time=0.5,
+            time=0.512,
             email="mc4536@princeton.edu"
         )
 

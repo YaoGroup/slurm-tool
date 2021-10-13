@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name={name}            # create a short name for your job
-#SBATCH --output=slurm-%A.%a.out     # stdout file
-#SBATCH --error=slurm-%A.%a.out      # stderr file
+#SBATCH --output={name}_%A.%a.out     # stdout file
+#SBATCH --error={name}_%A.%a.out      # stderr file
 #SBATCH --nodes={node}               # node count
 #SBATCH --ntasks={ntasks}            # total number of tasks across all nodes
 #SBATCH --cpus-per-task={cpus}       # cpu-cores per task (>1 if multi-threaded tasks)

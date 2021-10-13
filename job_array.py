@@ -80,7 +80,7 @@ class JobArray:
     SLURM_TEMPLATE = Path(__file__).parent.joinpath("job_array.slurm")
 
     # path for save auto generated slurm script
-    SLURM_SCRIPT = Path.cwd().joinpath("slurm-submit_{info}.slurm")
+    SLURM_SCRIPT = Path.cwd().joinpath("{name}_{info}.slurm")
 
     def __init__(self, **kwargs):
         self._config = SlurmConfig(**kwargs)
@@ -125,7 +125,7 @@ class JobArray:
         if not outf:
             info = datetime.now().strftime("%Y%m%d%H%M")
             cnt = 0
-            outf = str(self.SLURM_SCRIPT).format(info=info)
+            outf = str(self.SLURM_SCRIPT).format(info=info, name=self.config.name)
             while (outf := Path(outf)).is_file():
                 outf = str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}")
                 cnt += 1

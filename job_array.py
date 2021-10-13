@@ -1,6 +1,8 @@
-from datetime import datetime
-
+import os
+import re
+import logging
 from dataclasses import dataclass, fields
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -11,11 +13,47 @@ def _check_min(val, min, name: str = None):
     assert val > min, f"{name} expects to be larger than {min}"
 
 
+class RedirectOuput:
+
+    already_has_output = re.compile("(python|python3)\s.*(-o\s|--output\s|--output_dir\s)")
+    has_py_file = re.compile("(python|python3)\s.*.+\.py.*")
+
+    def __init__(self, output_directory: str, name: str):
+        self.name = str(name)
+        self.dir = Path(output_directory).absolute()
+        if not self.dir.is_dir():
+            raise ValueError(f"Invalid output directory: {self.dir}")
+        if not os.access(self.dir, os.W_OK):
+            raise ValueError(f"No writable access to directory: {self.dir}")
+
+    def redirect(self, jobs: List[str], array_count: int):
+        array_count = max(1, int(array_count))
+        cnt = 0
+        jobs_modified = []
+        modified = 'if [[ $SLURM_ARRAY_TASK_ID -eq "{id}" ]]; then {job}; fi'
+        for job in jobs:
+            if self.already_has_output.search(job):
+                msg = "Do NOT specify output directory (the -o, --output, --output_dir) option."
+                msg += " The job array will auto-generate values for the output argument"
+                raise ValueError(msg)
+
+            if self.has_py_file.search(job):
+                # Make separate directories for each job
+                out_dir = self.dir.joinpath(f"{self.name}_job-{cnt}")
+                out_dir.mkdir(parents=True, exist_ok=True)
+                cnt += 1
+                new_job = modified.format(id=cnt % array_count, job=job + " -o " + str(out_dir))
+                jobs_modified.append(new_job)
+            else:
+                jobs_modified.append(job)
+        return jobs_modified
+
+
 def poka_yoke(jobs: List[str]):
     for job in jobs:
         if job.count("python") > 1:
             msg = "Detect single job contains two 'python' ({job})"
-            print(msg)
+            logging.info(msg)
             while True:
                 answer = input("Could be typo. Still continue anyway? (y/n)")
                 if answer.lower() in {"y", "yes"}:
@@ -60,7 +98,6 @@ class SlurmConfig:
         _check_min(self.time, 0.0)
         _check_min(self.ntasks, 0)
 
-        self.arrays = f"0-{self.arrays}"
         hour = int(self.time)
         minutes = int((self.time % 1) * 60)
         seconds = int(((self.time % 1) * 60 % 1) * 60)
@@ -130,19 +167,24 @@ class JobArray:
         if not store_script_as:
             info = datetime.now().strftime("%Y%m%d%H%M")
             cnt = 0
-            outf = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info, name=self.config.name))
-            while outf.is_file():
-                outf = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}"))
+            slurm_script = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info, name=self.config.name))
+            while slurm_script.is_file():
+                slurm_script = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}", name=self.config.name))
                 cnt += 1
         else:
-            outf = outdir.joinpath(store_script_as)
+            slurm_script = outdir.joinpath(store_script_as)
 
-        with open(str(outf), "w") as f:
+        modifier = RedirectOuput(outdir, name=slurm_script.stem)
+        new_jobs = modifier.redirect(jobs, self.config.arrays)
+
+        with open(str(slurm_script), "w") as f:
             f.write(header + "\n")
             if self._conda_env:
                 f.write(f"conda activate {self._conda_env}\n")
-            for job in jobs:
+            for job in new_jobs:
                 f.write(job + "\n")
 
-        with ShellPopenWrapper() as shell:
-            shell.execute(f"sbatch {outf}")
+        logging.info(f"Generate the slurm script {slurm_script}")
+
+        # with ShellPopenWrapper() as shell:
+        #     shell.execute(f"sbatch {slurm_script}")

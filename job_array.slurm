@@ -8,7 +8,7 @@
 #SBATCH --mem-per-cpu={mem_per_cpu}G               # memory per cpu-core (4G is default)
 #SBATCH --gres=gpu:{gpus}                          # number of gpus per node
 #SBATCH --time={time}                              # total run time limit (HH:MM:SS)
-#SBATCH --array={arrays}                           # job array with index values 0, 1, 2, 3, 4
+#SBATCH --array=0-{arrays}                         # job array with index values 0, 1, 2, 3, 4
 #SBATCH --mail-type=all                            # send email on job start, end and fault
 #SBATCH --mail-user={email}
 

@@ -7,18 +7,35 @@ from typing import List
 from shell_cmd import ShellCmd, ShellPopenWrapper
 
 
+def _check_min(val, min, name: str = None):
+    assert val > min, f"{name} expects to be larger than {min}"
+
+
+def poka_yoke(jobs: List[str]):
+    for job in jobs:
+        if job.count("python") > 1:
+            msg = "Detect single job contains two 'python' ({job})"
+            print(msg)
+            while True:
+                answer = input("Could be typo. Still continue anyway? (y/n)")
+                if answer.lower() in {"y", "yes"}:
+                    return
+                elif answer.lower() in {"n", "no"}:
+                    raise RuntimeError("User stops the job submitting")
+
+
 @dataclass
 class SlurmConfig:
     name: str
-    output_file: str
-    node: int
-    cpus: int
-    gpus: int
-    arrays: int
-    mem_per_cpu: int
-    time: float
     email: str
+    output_dir: str
+    time: float
+    arrays: int
+    node: int = 1
     ntasks: int = 1
+    cpus: int = 1
+    gpus: int = 1
+    mem_per_cpu: int = 4
 
     def __post_init__(self):
         for field in fields(self):
@@ -32,16 +49,30 @@ class SlurmConfig:
                     f"to be {field.type}, got {repr(value)}"
                 raise ValueError(msg)
 
+        _check_min(self.arrays, 0)
+        _check_min(self.cpus, 0)
+        _check_min(self.node, 0)
+        _check_min(self.mem_per_cpu, 0)
+        _check_min(self.time, 0.0)
+        _check_min(self.ntasks, 0)
+
         self.arrays = f"0-{self.arrays}"
         hour = int(self.time)
         minutes = int((self.time % 1) * 60)
         seconds = int(((self.time % 1) * 60 % 1) * 60)
         self.time = f"{hour}:{minutes:02d}:{seconds:02d}"
 
+
     def create_header(self, slurm_template: str) -> str:
         with open(slurm_template, "r") as f:
             txt = f.read()
-            return txt.format(**{f.name : getattr(self, f.name) for f in fields(self)})
+            lines = []
+            configs = {f.name : getattr(self, f.name) for f in fields(self)}
+            for line in txt.splitlines():
+                if line.startswith("#SBATCH --mail") and not self.email:
+                    continue;
+                lines.append(line.format(**configs))
+            return "\n".join(lines)
 
 
 class JobArray:
@@ -75,6 +106,9 @@ class JobArray:
             store_script_as (str):
                 the path to store the auto-generated slurm script, if empty, a default file name is generated.
         """
+        # mistake-proofing
+        poka_yoke(jobs)
+
         # test if environemtn works
         cmd = ShellCmd("module purge")
         cmd = cmd.chain(ShellCmd("module load anaconda3/2021.5"))

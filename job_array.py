@@ -49,6 +49,10 @@ class SlurmConfig:
                     f"to be {field.type}, got {repr(value)}"
                 raise ValueError(msg)
 
+        if not Path(self.output_dir).absolute().is_dir():
+            raise ValueError(f"Invalid output_dir: {self.output_dir}")
+        self.output_dir = str(Path(self.output_dir).absolute())
+
         _check_min(self.arrays, 0)
         _check_min(self.cpus, 0)
         _check_min(self.node, 0)
@@ -80,7 +84,7 @@ class JobArray:
     SLURM_TEMPLATE = Path(__file__).parent.joinpath("job_array.slurm")
 
     # path for save auto generated slurm script
-    SLURM_SCRIPT = Path.cwd().joinpath("{name}_{info}.slurm")
+    SLURM_SCRIPT = "{name}_{info}.slurm"
 
     def __init__(self, **kwargs):
         self._config = SlurmConfig(**kwargs)
@@ -104,7 +108,8 @@ class JobArray:
                 a list of CLI commands to submit, for example,
                 ["python3 script.py param1 param2", "python3 script.py param3 param4"]
             store_script_as (str):
-                the path to store the auto-generated slurm script, if empty, a default file name is generated.
+                the name for the auto-generated slurm script, if empty, a default file name is generated.
+                the slurm script is placed under the sepcified output_dir directory
         """
         # mistake-proofing
         poka_yoke(jobs)
@@ -121,16 +126,18 @@ class JobArray:
             raise FileNotFoundError(msg)
 
         header = self._config.create_header(self.SLURM_TEMPLATE)
-        outf = store_script_as
-        if not outf:
+        outdir = Path(self.config.output_dir)
+        if not store_script_as:
             info = datetime.now().strftime("%Y%m%d%H%M")
             cnt = 0
-            outf = str(self.SLURM_SCRIPT).format(info=info, name=self.config.name)
-            while (outf := Path(outf)).is_file():
-                outf = str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}")
+            outf = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info, name=self.config.name))
+            while outf.is_file():
+                outf = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}"))
                 cnt += 1
+        else:
+            outf = outdir.joinpath(store_script_as)
 
-        with open(outf, "w") as f:
+        with open(str(outf), "w") as f:
             f.write(header + "\n")
             if self._conda_env:
                 f.write(f"conda activate {self._conda_env}\n")

@@ -1,15 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name={name}            # create a short name for your job
-#SBATCH --output={name}_%A.%a.out     # stdout file
-#SBATCH --error={name}_%A.%a.out      # stderr file
-#SBATCH --nodes={node}               # node count
-#SBATCH --ntasks={ntasks}            # total number of tasks across all nodes
-#SBATCH --cpus-per-task={cpus}       # cpu-cores per task (>1 if multi-threaded tasks)
-#SBATCH --mem-per-cpu={mem_per_cpu}G # memory per cpu-core (4G is default)
-#SBATCH --gres=gpu:{gpus}            # number of gpus per node
-#SBATCH --time={time}                # total run time limit (HH:MM:SS)
-#SBATCH --array={arrays}             # job array with index values 0, 1, 2, 3, 4
-#SBATCH --mail-type=all              # send email on job start, end and fault
+#SBATCH --job-name={name}                          # create a short name for your job
+#SBATCH --output={output_dir}/{name}_%A.%a.out     # stdout file
+#SBATCH --error={output_dir}/{name}_%A.%a.out      # stderr file
+#SBATCH --nodes={node}                             # node count
+#SBATCH --ntasks={ntasks}                          # total number of tasks across all nodes
+#SBATCH --cpus-per-task={cpus}                     # cpu-cores per task (>1 if multi-threaded tasks)
+#SBATCH --mem-per-cpu={mem_per_cpu}G               # memory per cpu-core (4G is default)
+#SBATCH --gres=gpu:{gpus}                          # number of gpus per node
+#SBATCH --time={time}                              # total run time limit (HH:MM:SS)
+#SBATCH --array={arrays}                           # job array with index values 0, 1, 2, 3, 4
+#SBATCH --mail-type=all                            # send email on job start, end and fault
 #SBATCH --mail-user={email}
 
 module purge
@@ -27,6 +27,6 @@ else
 fi
 unset __conda_setup
 
-echo "My SLURM_ARRAY_JOB_ID is $SLURM_ARRAY_JOB_ID."
-echo "My SLURM_ARRAY_TASK_ID is $SLURM_ARRAY_TASK_ID"
+echo "SLURM_ARRAY_JOB_ID : $SLURM_ARRAY_JOB_ID."
+echo "SLURM_ARRAY_TASK_ID : $SLURM_ARRAY_TASK_ID"
 echo "Executing on the machine:" $(hostname)

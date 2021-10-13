@@ -14,7 +14,7 @@ class TestSubmitSampleJob:
     def test_submit_sample_job(self):
         jobs = JobArray(
             name="test_sample",
-            output_dir="",
+            output_dir=str(Path.cwd()),
             node=1,
             cpus=1,
             gpus=2,

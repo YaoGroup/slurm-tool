@@ -14,7 +14,7 @@ python3 ~/my-code/my-job.py H_4
 
 One can use the tool to write a single Python file to launch all the jobs on cluster like this:
 ```python
-from slurm-tool.job_arary import JobArray
+from slurm_tool import JobArray
 
 jobs = JobArray(name="vary-H-experiments", output_dir="/scratch/gpfs/mc4536", node=1, cpus=1, arrays=5, time=0.5)
 jobs.set_env("tf24")
@@ -37,6 +37,6 @@ jobs.submit(
 - Create your environment using Conda
 - Clone both this tools and your target project from GitHub
 - Create a script for job_array, like the example given above
-    - Make sure the location which you clone the tools to allow you conduct a `import slurm-tool`
+    - Make sure the location which you clone the tools to allow you conduct a `import slurm_tool`
     - Make sure the environment name you use for `.set_env("my-env")` also works from terminal: `conda activate my-env`
 - After the `.submit()`, it submit the jobs to the cluster and the auto-generated `.slurm` file is created to the `output_dir` parameter given to `JobArray`

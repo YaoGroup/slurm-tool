@@ -3,17 +3,17 @@ import sys
 from pathlib import Path
 import pytest
 
-root = Path(__file__).parent.parent
-sys.path.append(str(root))
+package_loc = Path(__file__).parent.parent.parent
+sys.path.append(str(package_loc))
 
-
-from job_array import JobArray, RedirectOuput
+from slurm_tool import JobArray
+from slurm_tool.job_array import RedirectOutput
 
 
 class TestRedirectOutput:
 
     def test_redirect(self, tmp_path):
-        redirector = RedirectOuput(tmp_path, name="test_redirect")
+        redirector = RedirectOutput(tmp_path, name="test_redirect")
         jobs = [
             "python script.py --output mydirectory",
             "python script.py --output_dir mydirectory"

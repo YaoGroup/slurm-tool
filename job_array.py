@@ -186,5 +186,5 @@ class JobArray:
 
         logging.info(f"Generate the slurm script {slurm_script}")
 
-        # with ShellPopenWrapper() as shell:
-        #     shell.execute(f"sbatch {slurm_script}")
+        with ShellPopenWrapper() as shell:
+            shell.execute(f"sbatch {slurm_script}")

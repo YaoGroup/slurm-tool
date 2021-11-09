@@ -19,10 +19,10 @@ from slurm_tool import JobArray
 jobs = JobArray(name="vary-H-experiments", output_dir="/scratch/gpfs/mc4536", node=1, cpus=1, arrays=5, time=0.5)
 jobs.set_env("tf24")
 jobs.submit(
-    "python3 ~/my-code/my-job.py H_1"
-    "python3 ~/my-code/my-job.py H_2"
-    "python3 ~/my-code/my-job.py H_3"
-    "python3 ~/my-code/my-job.py H_4"
+    "python3 ~/my-code/my-job.py H_1",
+    "python3 ~/my-code/my-job.py H_2",
+    "python3 ~/my-code/my-job.py H_3",
+    "python3 ~/my-code/my-job.py H_4",
     "python3 ~/my-code/my-job.py H_5"
 )
 ```

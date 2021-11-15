@@ -1,4 +1,4 @@
-# Fast Slurm Jobs Submision using Princeton Cluster
+# Fast Slurm Jobs Submission using Princeton Cluster
 author: Ming-Ruey(Ray) Chou
 
 A tool auto-generates .slurm script for batch launching jobs using Python.

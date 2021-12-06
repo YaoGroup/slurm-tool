@@ -16,7 +16,7 @@ https://researchcomputing.princeton.edu/support/knowledge-base/python
 
 ## Usage:
 
-For example, the [`script_inverse.py`](https://github.com/YaoGroup/IceShelf2D/blob/main/script/script_inverse.py) in out Shelf 2D project receive the value of the interested parameter `noise_ratio` from command line, and also the directory for output the files via `-o` options:
+For example, the [`script_inverse.py`](https://github.com/YaoGroup/IceShelf2D/blob/main/script/script_inverse.py) in our Shelf 2D project receive the value of the interested parameter `noise_ratio` from command line, and also the directory for output the files via `-o` options:
 
 ```bash
 python ~/IceShelf2D/script/script_inverse.py 0.01 -o /scratch/gpfs/mc4536
@@ -57,8 +57,8 @@ Running the above Python file (`python my_submit.py`) will:
 - The Python script must accept an `-o` options for specifying the output directory `python3 -o output-dir my-job.py param1 param2`.
 
 ## Pre-Steps
-- Login to the Cluster
-- Create your environment using Conda
+- Login to the Cluster (for example `ssh mc4536@della.princeton.edu`)
+- Create your environment using Conda (for example `module load anaconda3/2020.11 && conda create -f .\environment.yml`)
 - Clone both this tools and your target project from GitHub
 - Create a script for job_array, like the example given above
     - Make sure the location which you clone the tools to allow you conduct a `import slurm_tool`

@@ -58,7 +58,7 @@ Running the above Python file (`python my_submit.py`) will:
 
 ## Pre-Steps
 - Login to the Cluster (for example `ssh mc4536@della.princeton.edu`)
-- Create your environment using Conda (for example `module load anaconda3/2020.11 && conda create -f .\environment.yml`)
+- Create your environment using Conda. Acitvate the environment and test it.
 - Clone both this tools and your target project from GitHub
 - Create a script for job_array, like the example given above
     - Make sure the location which you clone the tools to allow you conduct a `import slurm_tool`

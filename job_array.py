@@ -1,19 +1,19 @@
 import os
 import re
 import logging
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from datetime import datetime
 from pathlib import Path
 from typing import List
 
-from shell_cmd import ShellCmd, ShellPopenWrapper
+from .shell_cmd import ShellCmd, ShellPopenWrapper
 
 
 def _check_min(val, min, name: str = None):
     assert val > min, f"{name} expects to be larger than {min}"
 
 
-class RedirectOuput:
+class RedirectOutput:
 
     already_has_output = re.compile("(python|python3)\s.*(-o\s|--output\s|--output_dir\s)")
     has_py_file = re.compile("(python|python3)\s.*.+\.py.*")
@@ -27,7 +27,7 @@ class RedirectOuput:
             raise ValueError(f"No writable access to directory: {self.dir}")
 
     def redirect(self, jobs: List[str], array_count: int):
-        array_count = max(1, int(array_count))
+        array_count = max(1, int(array_count) + 1)
         cnt = 0
         jobs_modified = []
         modified = 'if [[ $SLURM_ARRAY_TASK_ID -eq "{id}" ]]; then {job}; fi'
@@ -41,9 +41,9 @@ class RedirectOuput:
                 # Make separate directories for each job
                 out_dir = self.dir.joinpath(f"{self.name}_job-{cnt}")
                 out_dir.mkdir(parents=True, exist_ok=True)
-                cnt += 1
                 new_job = modified.format(id=cnt % array_count, job=job + " -o " + str(out_dir))
                 jobs_modified.append(new_job)
+                cnt += 1
             else:
                 jobs_modified.append(job)
         return jobs_modified
@@ -68,11 +68,11 @@ class SlurmConfig:
     email: str
     output_dir: str
     time: float
-    arrays: int
+    arrays: int = -1
     node: int = 1
     ntasks: int = 1
     cpus: int = 1
-    gpus: int = 1
+    gpus: int = -1
     mem_per_cpu: int = 4
 
     def __post_init__(self):
@@ -91,18 +91,17 @@ class SlurmConfig:
             raise ValueError(f"Invalid output_dir: {self.output_dir}")
         self.output_dir = str(Path(self.output_dir).absolute())
 
-        _check_min(self.arrays, 0)
         _check_min(self.cpus, 0)
         _check_min(self.node, 0)
         _check_min(self.mem_per_cpu, 0)
         _check_min(self.time, 0.0)
         _check_min(self.ntasks, 0)
 
+        self._raw_time = self.time
         hour = int(self.time)
         minutes = int((self.time % 1) * 60)
         seconds = int(((self.time % 1) * 60 % 1) * 60)
         self.time = f"{hour}:{minutes:02d}:{seconds:02d}"
-
 
     def create_header(self, slurm_template: str) -> str:
         with open(slurm_template, "r") as f:
@@ -111,6 +110,10 @@ class SlurmConfig:
             configs = {f.name : getattr(self, f.name) for f in fields(self)}
             for line in txt.splitlines():
                 if line.startswith("#SBATCH --mail") and not self.email:
+                    continue;
+                if line.startswith("#SBATCH --gres") and self.gpus < 0:
+                    continue;
+                if line.startswith("#SBATCH --array") and self.arrays <= 0:
                     continue;
                 lines.append(line.format(**configs))
             return "\n".join(lines)
@@ -151,6 +154,12 @@ class JobArray:
         # mistake-proofing
         poka_yoke(jobs)
 
+        # assign array count if none
+        if self.config.arrays > 0:
+            config = self.config
+        else:
+            config = replace(self.config, arrays=len(jobs) - 1, time=self.config._raw_time)
+
         # test if environemtn works
         cmd = ShellCmd("module purge")
         cmd = cmd.chain(ShellCmd("module load anaconda3/2021.5"))
@@ -162,20 +171,20 @@ class JobArray:
             msg = f"Can not find slurm script {self.SLURM_TEMPLATE}"
             raise FileNotFoundError(msg)
 
-        header = self._config.create_header(self.SLURM_TEMPLATE)
-        outdir = Path(self.config.output_dir)
+        header = config.create_header(self.SLURM_TEMPLATE)
+        outdir = Path(config.output_dir)
         if not store_script_as:
             info = datetime.now().strftime("%Y%m%d%H%M")
             cnt = 0
-            slurm_script = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info, name=self.config.name))
+            slurm_script = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info, name=config.name))
             while slurm_script.is_file():
-                slurm_script = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}", name=self.config.name))
+                slurm_script = outdir.joinpath(str(self.SLURM_SCRIPT).format(info=info + f"_{cnt}", name=config.name))
                 cnt += 1
         else:
             slurm_script = outdir.joinpath(store_script_as)
 
-        modifier = RedirectOuput(outdir, name=slurm_script.stem)
-        new_jobs = modifier.redirect(jobs, self.config.arrays)
+        modifier = RedirectOutput(outdir, name=slurm_script.stem)
+        new_jobs = modifier.redirect(jobs, config.arrays)
 
         with open(str(slurm_script), "w") as f:
             f.write(header + "\n")

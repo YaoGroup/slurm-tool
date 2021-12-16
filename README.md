@@ -38,7 +38,7 @@ One can use our tool (which is in Python) to generate the slurm script for above
 # this is Python file called `my_submit.py`
 from slurm_tool import JobArray
 
-jobs = JobArray(name="vary-noise-experiments", output_dir="/scratch/gpfs/mc4536", node=1, cpus=1, arrays=5, time=0.5)
+jobs = JobArray(name="vary-noise-experiments", output_dir="/scratch/gpfs/mc4536", node=1, cpus=1, gpus=1, time=0.5)
 jobs.set_env("tf24")
 jobs.submit([
     "python ~/IceShelf2D/script/script_inverse.py 0.01",

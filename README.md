@@ -40,12 +40,12 @@ from slurm_tool import JobArray
 
 jobs = JobArray(name="vary-noise-experiments", output_dir="/scratch/gpfs/mc4536", node=1, cpus=1, arrays=5, time=0.5)
 jobs.set_env("tf24")
-jobs.submit(
+jobs.submit([
     "python ~/IceShelf2D/script/script_inverse.py 0.01",
     "python ~/IceShelf2D/script/script_inverse.py 0.05",
     "python ~/IceShelf2D/script/script_inverse.py 0.1",
     "python ~/IceShelf2D/script/script_inverse.py 0.5",
-)
+])
 ```
 Running the above Python file (`python my_submit.py`) will:
 - Create a Slurm script for running the 4 jobs and store the script into the `output_dir` of `JobArray`
